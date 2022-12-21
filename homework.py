@@ -5,13 +5,9 @@ import requests
 
 import logging
 
-# TELEGRAM_CHAT_ID=358435709
-
 import telegram
 
 from dotenv import load_dotenv
-
-# from envparse import env
 
 from http import HTTPStatus
 
@@ -20,7 +16,6 @@ load_dotenv()
 PRACTICUM_TOKEN = os.getenv("PRACTICUM_TOKEN")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
 
 RETRY_PERIOD = 600
 ONE_DAY = 86400
@@ -40,12 +35,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 handler.setFormatter(formatter)
 
 
 def check_tokens():
-    """
+    """Информация о функции.
     Проверяет доступность переменных окружения,
     которые необходимы для работы программы.
     """
@@ -95,7 +92,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """
+    """Информация о функции.
     Извлекает из информации о конкретной
     домашней работе статус этой работы.
     """

@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 from http import HTTPStatus
 from typing import Dict, List, NoReturn
 
-from exceptions import RequestError, TypeIsNotList, ProjStatusNotFound
-from exceptions import HttpStatusNotOk
+from exceptions import ProjStatusNotFound, HttpStatusNotOk
 
 load_dotenv()
 
@@ -70,7 +69,7 @@ def get_api_answer(timestamp: int) -> Dict:
     payload = {"from_date": timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-    except RequestError as error:
+    except requests.RequestException as error:
         raise error(f"Ошибка при запросе к основному API: {error}")
     if response.status_code != HTTPStatus.OK:
         raise HttpStatusNotOk(
@@ -81,14 +80,18 @@ def get_api_answer(timestamp: int) -> Dict:
 
 def check_response(response: Dict) -> Dict:
     """Проверяет ответ API на соответствие документации."""
-    if "homeworks" and "current_date" not in response:
+    if not isinstance(response, dict):
+        raise TypeError(f"Переменная {response} не является словарем.")
+    if not response.get("homeworks"):
         raise KeyError(
-            f"Нет доступных значений в ответе сервера.\
-                homeworks: {response.get('homeworks')};\
-                current_date: {response.get('current_date')}"
+            "Нет доступных значений в ответе сервера: homeworks"
+        )
+    if not response.get("current_date"):
+        raise KeyError(
+            "Нет доступных значений в ответе сервера: current_date"
         )
     if not isinstance(response["homeworks"], list):
-        raise TypeIsNotList(
+        raise TypeError(
             "В ответе API домашки под ключом `homeworks` данные приходят\
              не в виде списка."
         )

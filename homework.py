@@ -12,7 +12,12 @@ from dotenv import load_dotenv
 from http import HTTPStatus
 from typing import Dict, List, NoReturn
 
-from exceptions import ProjStatusNotFound, HttpStatusNotOk
+from exceptions import (
+    ProjStatusNotFoundError,
+    HttpStatusNotOkError,
+    ResponseIsEmptyError,
+    ValueIsNotListError,
+)
 
 load_dotenv()
 
@@ -54,7 +59,7 @@ def check_tokens() -> bool:
 
 def send_message(bot: telegram.Bot, message: str) -> None:
     """Отправляет сообщение в Telegram чат."""
-    logger.info('Начало отправки сообщения в Telegram')
+    logger.info("Начало отправки сообщения в Telegram")
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except telegram.error.TelegramError as error:
@@ -65,14 +70,14 @@ def send_message(bot: telegram.Bot, message: str) -> None:
 
 def get_api_answer(timestamp: int) -> Dict:
     """Делает запрос к единственному эндпоинту API-сервиса."""
-    logger.info('Начали запрос к API')
+    logger.info("Начали запрос к API")
     payload = {"from_date": timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
     except requests.RequestException as error:
         raise error(f"Ошибка при запросе к основному API: {error}")
     if response.status_code != HTTPStatus.OK:
-        raise HttpStatusNotOk(
+        raise HttpStatusNotOkError(
             f"Ошибка запроса {response.status_code} {response.reason}"
         )
     return response.json()
@@ -83,22 +88,17 @@ def check_response(response: Dict) -> Dict:
     if not isinstance(response, dict):
         raise TypeError(f"Переменная {response} не является словарем.")
     if not response.get("homeworks"):
-        raise KeyError(
-            "Нет доступных значений в ответе сервера: homeworks"
-        )
+        raise KeyError("Нет доступных значений в ответе сервера: homeworks")
     if not response.get("current_date"):
-        raise KeyError(
-            "Нет доступных значений в ответе сервера: current_date"
-        )
+        raise KeyError("Нет доступных значений в ответе сервера: current_date")
     if not isinstance(response["homeworks"], list):
-        raise TypeError(
+        raise ValueIsNotListError(
             "В ответе API домашки под ключом `homeworks` данные приходят\
              не в виде списка."
         )
-    try:
-        return response.get("homeworks")[0]
-    except IndexError:
-        raise IndexError("Список работ пуст")
+    if not response.get("homeworks")[0]:
+        raise ResponseIsEmptyError("Список работ пуст")    
+    return response.get("homeworks")[0]
 
 
 def parse_status(homework: Dict) -> str:
@@ -112,12 +112,12 @@ def parse_status(homework: Dict) -> str:
             raise KeyError(f"Ключ {data} отсутствует в ответе сервера")
 
     homework_name = homework.get("homework_name")
-    homework_status = homework.get("status")
-    if homework_status not in HOMEWORK_VERDICTS:
-        raise ProjStatusNotFound(
-            f"Неопределенный статус работы: {homework_status}"
+    message = homework.get("status")
+    if message not in HOMEWORK_VERDICTS:
+        raise ProjStatusNotFoundError(
+            f"Неопределенный статус работы: {message}"
         )
-    verdict = HOMEWORK_VERDICTS[homework_status]
+    verdict = HOMEWORK_VERDICTS[message]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -134,24 +134,22 @@ def main() -> NoReturn:
         logger.critical(f"Отсутствуют токены {missing_tokens()}")
         sys.exit("Отсутствуют токены")
 
-    message_of_error = ""
+    previous_message = ""
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
     while True:
         try:
-            bot = telegram.Bot(token=TELEGRAM_TOKEN)
             timestamp = int(time.time()) - ONE_DAY
             response = get_api_answer(timestamp)
-            homework_status = parse_status(check_response(response))
-            if homework_status != message_of_error:
-                send_message(bot, homework_status)
-                message_of_error = homework_status
+            message = parse_status(check_response(response))
 
         except Exception as error:
             logging.error(error)
             message = f"Сбой в работе программы: {error}"
-            if message != message_of_error:
-                send_message(bot, message)
-                message_of_error = message
+
         finally:
+            if message != previous_message:
+                send_message(bot, message)
+                previous_message = message
             time.sleep(RETRY_PERIOD)
 
 

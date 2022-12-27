@@ -97,7 +97,7 @@ def check_response(response: Dict) -> Dict:
              не в виде списка."
         )
     if not response.get("homeworks")[0]:
-        raise ResponseIsEmptyError("Список работ пуст")    
+        raise ResponseIsEmptyError("Список работ пуст")
     return response.get("homeworks")[0]
 
 

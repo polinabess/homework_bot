@@ -93,8 +93,8 @@ def check_response(response: Dict) -> Dict:
         raise KeyError("Нет доступных значений в ответе сервера: current_date")
     if not isinstance(response["homeworks"], list):
         raise ValueIsNotListError(
-            "В ответе API домашки под ключом `homeworks` данные приходят\
-             не в виде списка."
+            f"В ответе API домашки под ключом `homeworks` данные приходят\
+             не в виде списка, {type(response['homeworks'])}."
         )
     if not response.get("homeworks")[0]:
         raise ResponseIsEmptyError("Список работ пуст")

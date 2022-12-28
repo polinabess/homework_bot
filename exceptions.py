@@ -11,12 +11,12 @@ class HttpStatusNotOkError(Exception):
 
 
 class ResponseIsEmptyError(IndexError):
-    """."""
+    """В ответе ничего не приходит."""
 
     pass
 
 
 class ValueIsNotListError(TypeError):
-    """."""
+    """В ответе API тип данных не является списком."""
 
     pass
